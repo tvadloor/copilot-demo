@@ -91,6 +91,83 @@ class TestApp(unittest.TestCase):
         self.assertEqual(len(data), 1)
         self.assertEqual(set(data[0].keys()), {'id', 'name', 'breed'})
 
+        @patch('app.db.session.query')
+        def test_get_dog_by_id_success(self, mock_query):
+            """Test successful retrieval of a single dog by ID"""
+            # Arrange
+            dog = MagicMock()
+            dog.id = 1
+            dog.name = "Buddy"
+            dog.breed = "Labrador"
+            dog.age = 3
+            dog.description = "Friendly dog"
+            dog.gender = "Male"
+            status_mock = MagicMock()
+            status_mock.name = "Available"
+            dog.status = status_mock
+            mock_query_instance = MagicMock()
+            mock_query.return_value = mock_query_instance
+            mock_query_instance.join.return_value = mock_query_instance
+            mock_query_instance.filter.return_value = mock_query_instance
+            mock_query_instance.first.return_value = dog
+
+            # Act
+            response = self.app.get('/api/dogs/1')
+
+            # Assert
+            self.assertEqual(response.status_code, 200)
+            data = json.loads(response.data)
+            self.assertEqual(data['id'], 1)
+            self.assertEqual(data['name'], "Buddy")
+            self.assertEqual(data['breed'], "Labrador")
+            self.assertEqual(data['age'], 3)
+            self.assertEqual(data['description'], "Friendly dog")
+            self.assertEqual(data['gender'], "Male")
+            self.assertEqual(data['status'], "Available")
+
+        @patch('app.db.session.query')
+        def test_get_dog_by_id_not_found(self, mock_query):
+            """Test retrieval of a dog by ID that does not exist (404)"""
+            # Arrange
+            mock_query_instance = MagicMock()
+            mock_query.return_value = mock_query_instance
+            mock_query_instance.join.return_value = mock_query_instance
+            mock_query_instance.filter.return_value = mock_query_instance
+            mock_query_instance.first.return_value = None
+
+            # Act
+            response = self.app.get('/api/dogs/999')
+
+            # Assert
+            self.assertEqual(response.status_code, 404)
+            data = json.loads(response.data)
+            self.assertIn("error", data)
+            self.assertEqual(data["error"], "Dog not found")
+
+        @patch('app.Breed.query')
+        def test_get_breeds_success(self, mock_breed_query):
+            """Test successful retrieval of all breeds"""
+            # Arrange
+            breed1 = MagicMock()
+            breed1.id = 1
+            breed1.name = "Labrador Retriever"
+            breed2 = MagicMock()
+            breed2.id = 2
+            breed2.name = "German Shepherd"
+            mock_breed_query.all.return_value = [breed1, breed2]
+
+            # Act
+            response = self.app.get('/api/breeds')
+
+            # Assert
+            self.assertEqual(response.status_code, 200)
+            data = json.loads(response.data)
+            self.assertEqual(len(data), 2)
+            self.assertEqual(data[0]['id'], 1)
+            self.assertEqual(data[0]['name'], "Labrador Retriever")
+            self.assertEqual(data[1]['id'], 2)
+            self.assertEqual(data[1]['name'], "German Shepherd")
+
 
 if __name__ == '__main__':
     unittest.main()
